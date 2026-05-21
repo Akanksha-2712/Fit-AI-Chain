@@ -200,8 +200,8 @@ export default function RecipesPage() {
               className="w-full bg-white/20 text-white placeholder-white/50 pl-10 pr-4 py-2.5 rounded-xl border border-white/20 focus:outline-none focus:bg-white/30 transition-all"
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white">
-                <X className="h-4 w-4" />
+              <button aria-label="Clear recipe search" onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white">
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -299,18 +299,20 @@ export default function RecipesPage() {
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <button
                     id={`edit-recipe-${recipe.id}`}
+                    aria-label={`Edit recipe ${recipe.name}`}
                     onClick={() => setEditingRecipe(recipe)}
                     className="text-gray-300 hover:text-orange-400 transition-colors p-1"
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="h-4 w-4" aria-hidden="true" />
                   </button>
                   <button
                     id={`delete-recipe-${recipe.id}`}
+                    aria-label={`Delete recipe ${recipe.name}`}
                     onClick={() => handleDelete(recipe.id)}
                     disabled={isDeleting}
                     className="text-gray-200 hover:text-red-400 transition-colors p-1"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
               </div>

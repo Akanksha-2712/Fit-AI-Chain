@@ -147,8 +147,8 @@ export default function RecipeCreator({ username, onSave, onClose, editRecipe }:
           <h2 className="text-xl font-bold text-white">{isEditing ? 'Edit Recipe' : 'Create Recipe'}</h2>
         </div>
         {onClose && (
-          <button onClick={onClose} className="text-white/80 hover:text-white transition-colors">
-            <X className="h-5 w-5" />
+          <button aria-label="Close recipe creator" onClick={onClose} className="text-white/80 hover:text-white transition-colors">
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         )}
       </div>
@@ -249,10 +249,11 @@ export default function RecipeCreator({ username, onSave, onClose, editRecipe }:
                     <p className="text-xs text-gray-400">{ing.amount} {ing.unit} · {ing.calories} kcal · P:{ing.protein}g C:{ing.carbs}g F:{ing.fat}g</p>
                   </div>
                   <button
+                    aria-label={`Remove ingredient ${ing.name}`}
                     onClick={() => removeIngredient(ing.id)}
                     className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
               ))}

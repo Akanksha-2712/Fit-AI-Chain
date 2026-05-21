@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { recipes } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { upsertUser } from '@/lib/db-utils'
 
 export async function GET(req: NextRequest) {
@@ -32,15 +32,76 @@ export async function GET(req: NextRequest) {
   }
 }
 
+function validateRecipePayload(data: any) {
+  const { username, name, servings, ingredients, totalCalories, totalProtein, totalCarbs, totalFat } = data
+
+  if (!username || typeof username !== 'string' || !username.trim()) {
+    return { isValid: false, message: 'Invalid or missing username' }
+  }
+
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return { isValid: false, message: 'Invalid or missing recipe name' }
+  }
+
+  const normalizedServings = servings ?? 1
+  if (!Number.isInteger(normalizedServings) || normalizedServings <= 0) {
+    return { isValid: false, message: 'Servings must be a positive integer' }
+  }
+
+  if (!Array.isArray(ingredients) || ingredients.length === 0) {
+    return { isValid: false, message: 'Ingredients must be a non-empty array' }
+  }
+
+  for (let i = 0; i < ingredients.length; i++) {
+    const ing = ingredients[i]
+    if (!ing || typeof ing !== 'object') {
+      return { isValid: false, message: `Ingredient at index ${i} is invalid` }
+    }
+    if (!ing.name || typeof ing.name !== 'string' || !ing.name.trim()) {
+      return { isValid: false, message: `Ingredient at index ${i} is missing a valid name` }
+    }
+    if (!Number.isFinite(ing.calories) || ing.calories < 0) {
+      return { isValid: false, message: `Ingredient "${ing.name}" must have non-negative finite calories` }
+    }
+    if (ing.protein !== undefined && (!Number.isFinite(ing.protein) || ing.protein < 0)) {
+      return { isValid: false, message: `Ingredient "${ing.name}" must have non-negative finite protein` }
+    }
+    if (ing.carbs !== undefined && (!Number.isFinite(ing.carbs) || ing.carbs < 0)) {
+      return { isValid: false, message: `Ingredient "${ing.name}" must have non-negative finite carbs` }
+    }
+    if (ing.fat !== undefined && (!Number.isFinite(ing.fat) || ing.fat < 0)) {
+      return { isValid: false, message: `Ingredient "${ing.name}" must have non-negative finite fat` }
+    }
+  }
+
+  if (!Number.isFinite(totalCalories) || totalCalories < 0) {
+    return { isValid: false, message: 'Total calories must be a non-negative finite number' }
+  }
+
+  if (totalProtein !== undefined && (!Number.isFinite(totalProtein) || totalProtein < 0)) {
+    return { isValid: false, message: 'Total protein must be a non-negative finite number' }
+  }
+
+  if (totalCarbs !== undefined && (!Number.isFinite(totalCarbs) || totalCarbs < 0)) {
+    return { isValid: false, message: 'Total carbs must be a non-negative finite number' }
+  }
+
+  if (totalFat !== undefined && (!Number.isFinite(totalFat) || totalFat < 0)) {
+    return { isValid: false, message: 'Total fat must be a non-negative finite number' }
+  }
+
+  return { isValid: true }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json()
-    const { username, name, description, servings, ingredients, totalCalories, totalProtein, totalCarbs, totalFat, imageUrl, isPublic } = data
-
-    if (!username || !name || !ingredients || totalCalories === undefined) {
-      return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 })
+    const validation = validateRecipePayload(data)
+    if (!validation.isValid) {
+      return NextResponse.json({ success: false, message: validation.message }, { status: 400 })
     }
 
+    const { username, name, description, servings, ingredients, totalCalories, totalProtein, totalCarbs, totalFat, imageUrl, isPublic } = data
     const user = await upsertUser(username)
 
     if (!db) {
@@ -89,12 +150,17 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const data = await req.json()
-    const { id, username, name, description, servings, ingredients, totalCalories, totalProtein, totalCarbs, totalFat, isPublic } = data
-
-    if (!id || !username || !name || !ingredients || totalCalories === undefined) {
-      return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 })
+    const { id } = data
+    if (!id) {
+      return NextResponse.json({ success: false, message: 'Missing recipe id' }, { status: 400 })
     }
 
+    const validation = validateRecipePayload(data)
+    if (!validation.isValid) {
+      return NextResponse.json({ success: false, message: validation.message }, { status: 400 })
+    }
+
+    const { username, name, description, servings, ingredients, totalCalories, totalProtein, totalCarbs, totalFat, isPublic } = data
     const user = await upsertUser(username)
 
     if (!db) {
@@ -104,7 +170,7 @@ export async function PUT(req: NextRequest) {
     const [updated] = await db
       .update(recipes)
       .set({ name, description, servings, ingredients, totalCalories, totalProtein, totalCarbs, totalFat, isPublic })
-      .where(eq(recipes.id, id))
+      .where(and(eq(recipes.id, id), eq(recipes.userId, user.id)))
       .returning()
 
     if (!updated) {
@@ -141,7 +207,7 @@ export async function DELETE(req: NextRequest) {
 
     const deleted = await db
       .delete(recipes)
-      .where(eq(recipes.id, id))
+      .where(and(eq(recipes.id, id), eq(recipes.userId, user.id)))
       .returning()
 
     if (deleted.length === 0) {

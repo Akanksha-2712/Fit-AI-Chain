@@ -33,7 +33,7 @@ export default function Navigation() {
       href: '/recipes',
       label: 'Recipes',
       icon: ChefHat,
-      active: pathname === '/recipes' || pathname.startsWith('/recipes')
+      active: pathname === '/recipes' || pathname.startsWith('/recipes/')
     },
   ]
 
